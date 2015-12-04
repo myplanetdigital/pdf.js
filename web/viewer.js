@@ -126,6 +126,106 @@ var PDFViewerApplication = {
     this.pdfLinkService = pdfLinkService;
 
     var container = document.getElementById('viewerContainer');
+var numberOfClick = 1;
+container.onclick = function (evt) {
+  /*console.log("offsetXY: " + evt.offsetX + "/" + evt.offsetY);
+  console.log("screenXY: " + evt.screenX + "/" + evt.screenY);
+  console.log("pageXY: " + evt.pageX + "/" + evt.pageY);
+  console.log("page: " + evt.pageX + "/" + evt.pageY);
+  console.log("scroll: " + evt.target.offsetHeight);*/
+
+  var target = evt.target;
+  if (target.nodeName === 'INPUT' || evt.target.getAttribute('id') === 'viewer') {
+    evt.stopPropagation();
+    return;
+  }
+  var pageId = evt.path.findIndex(function (path) {
+        if (/^pageContainer/.test(path.id)) {
+          return true;
+        }
+      }),
+      pageNumber = /pageContainer(\d+)/.exec(evt.path[pageId].id)[1],
+      heightOffset;
+
+  if (pageId === 1) {
+    console.log("clientHeight: " + evt.path[pageId].clientHeight);
+    console.log("offsetY: " + evt.offsetY);
+    heightOffset = ((pageNumber - 1) * (evt.path[pageId].clientHeight + 10)) + evt.offsetY;
+  } else {
+    console.log("clientHeight: " + evt.path[pageId].clientHeight);
+    console.log("offsetHeight: " + evt.target.offsetHeight);
+    console.log("offsetTop: " + evt.target.offsetTop);
+    heightOffset = ((pageNumber - 1) * (evt.path[pageId].clientHeight + 10)) + evt.target.offsetTop;
+  }
+
+  console.log("path index: " + pageId);
+
+  var newElement;
+  if (numberOfClick === 1) {
+    newElement = document.createElement("div");
+    newElement.setAttribute("style", "position: absolute; top: " +
+      heightOffset + "px; left: " + evt.pageX + "px; z-index: 10000; cursor: move; border: 1px solid red;");
+    newElement.innerHTML = heightOffset + " " + evt.pageX;
+  } else if (numberOfClick === 2) {
+    newElement = document.createElement("img");
+    newElement.setAttribute("src", "./totoro_by_hello_i_am_thomas-d76qmkg.png");
+    newElement.setAttribute("width", "100");
+    newElement.setAttribute("height", "157");
+    newElement.setAttribute("style", "position: absolute; top: " +
+      heightOffset + "px; left: " + evt.pageX + "px; z-index: 10000; cursor: move;");
+  } else {
+    newElement = document.createElement("input");
+    newElement.setAttribute("type", "text");
+    newElement.setAttribute("style", "position: absolute; top: " +
+      heightOffset + "px; left: " + evt.pageX + "px; z-index: 10000; cursor: move; border: 1px solid red;");
+    newElement.innerHTML = heightOffset + " " + evt.pageX;
+
+    /*newElement = document.createElement("input");
+    newElement.type = 'text';
+    newElement.style.position = 'absolute';
+    newElement.style.opacity = 0;
+    newElement.style.pointerEvents = 'none';
+    newElement.innerHTML = heightOffset + " " + evt.pageX;
+
+
+    newElement.style.left = evt.pageX + 'px';
+    newElement.style.top = heightOffset + 'px';
+    newElement.style.width = '100px';
+    newElement.style.height = '30px';
+    newElement.style.zIndex = 0;
+    newElement.maxLength = 255;*/
+
+    // setup the keydown listener
+    /*newElement.addEventListener('keydown', function(e) {
+      e = e || window.event;
+
+      if (self._hasFocus) {
+        self.keydown(e, self);
+      }
+    });
+
+    // setup the keyup listener
+    newElement.addEventListener('keyup', function(e) {
+      e = e || window.event;
+
+      // update the canvas input state information from the hidden input
+      self._value = newElement.value;
+      self._cursorPos = newElement.selectionStart;
+      // update selection to hidden input's selection in case user did keyboard-based selection
+      self._selection = [newElement.selectionStart, newElement.selectionEnd];
+      self.render();
+
+      if (self._hasFocus) {
+        self._onkeyup(e, self);
+      }
+    });*/
+
+
+  }
+
+  container.appendChild(newElement);
+  numberOfClick = (numberOfClick + 1)%3;
+};
     var viewer = document.getElementById('viewer');
     this.pdfViewer = new PDFViewer({
       container: container,
@@ -598,9 +698,6 @@ var PDFViewerApplication = {
     loadingTask.onProgress = function getDocumentProgress(progressData) {
       self.progress(progressData.loaded / progressData.total);
     };
-
-    // Listen for unsupported features to trigger the fallback UI.
-    loadingTask.onUnsupportedFeature = this.fallback.bind(this);
 
     var result = loadingTask.promise.then(
       function getDocumentCallback(pdfDocument) {
@@ -1467,6 +1564,10 @@ function webViewerInitialized() {
   if (PDFViewerApplication.supportsIntegratedFind) {
     document.getElementById('viewFind').classList.add('hidden');
   }
+
+  // Listen for unsupported features to trigger the fallback UI.
+  PDFJS.UnsupportedManager.listen(
+    PDFViewerApplication.fallback.bind(PDFViewerApplication));
 
   // Suppress context menus for some controls
   document.getElementById('scaleSelect').oncontextmenu = noContextMenuHandler;
